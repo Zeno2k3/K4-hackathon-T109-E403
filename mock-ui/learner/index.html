@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mock VLearn UI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" id="app">
+    <button id="sidebarExpandBtn" class="sidebar-edge-toggle" aria-label="Hiện danh sách tài liệu" title="Hiện danh sách tài liệu" hidden>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+
+    <aside class="sidebar" id="sidebarPanel">
+      <header class="brand">
+        <span>VLearn</span>
+        <button id="sidebarCollapseBtn" class="sidebar-collapse-btn" aria-label="Ẩn danh sách tài liệu" aria-expanded="true" title="Ẩn danh sách tài liệu">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+      </header>
+      <div class="sections" id="sections"></div>
+    </aside>
+
+    <main class="viewer">
+      <div class="toolbar" role="toolbar" aria-label="Công cụ xem tài liệu">
+        <div class="toolbar-group segmented" role="group" aria-label="Chế độ tương tác">
+          <button class="seg-btn" id="modeRead" aria-pressed="false" title="Chế độ đọc">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+            <span>Đọc</span>
+          </button>
+          <button class="seg-btn" id="modePen" aria-pressed="false" title="Chế độ bút">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+            <span>Bút</span>
+          </button>
+          <button class="seg-btn" id="modeHighlight" aria-pressed="false" title="Chế độ highlight">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l6-6 4 4-6 6H9v-4z"/><path d="M4 20l3-3"/></svg>
+            <span>Highlight</span>
+          </button>
+          <div class="more-wrap">
+            <button class="seg-btn icon-only" id="moreBtn" aria-label="Thêm tùy chọn" aria-haspopup="true" aria-expanded="false" title="Thêm tùy chọn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+            </button>
+            <div class="dropdown-menu" id="moreMenu" role="menu" aria-label="Tùy chọn khác" hidden>
+              <button role="menuitem" id="noteBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H8l-4 4V4z"/></svg>
+                Ghi chú cho trang này
+              </button>
+              <button role="menuitem" id="summaryBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+                Tóm tắt nội dung slide
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="toolbar-divider" aria-hidden="true"></div>
+
+        <div class="toolbar-badge" id="pageBadge" role="status">Trang 1 · 0 note</div>
+
+        <div class="toolbar-divider" aria-hidden="true"></div>
+
+        <div class="toolbar-group zoom-group" role="group" aria-label="Thu phóng">
+          <button id="zoomOut" aria-label="Thu nhỏ">−</button>
+          <span id="zoomLevel" aria-live="polite">100%</span>
+          <button id="zoomIn" aria-label="Phóng to">+</button>
+        </div>
+
+        <div class="toolbar-divider" aria-hidden="true"></div>
+
+        <div class="toolbar-group icon-group">
+          <button id="prev" aria-label="Trang trước" title="Trang trước">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <button id="next" aria-label="Trang sau" title="Trang sau">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+          <button id="downloadBtn" aria-label="Tải xuống tài liệu" title="Tải xuống tài liệu">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+          </button>
+          <button id="exportBtn" aria-label="Xuất trang hiện tại" title="Xuất trang hiện tại">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M12 12v6m0 0l-2.5-2.5M12 18l2.5-2.5"/></svg>
+          </button>
+          <button id="undoBtn" aria-label="Hoàn tác thao tác gần nhất" title="Hoàn tác">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h10a5 5 0 0 1 0 10h-2"/><path d="M3 10l4-4M3 10l4 4"/></svg>
+          </button>
+          <button id="clearBtn" class="danger" aria-label="Xóa toàn bộ highlight và ghi chú của trang" title="Xóa toàn bộ trên trang này">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0l1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12"/></svg>
+          </button>
+        </div>
+
+        <div class="glossary-wrap">
+          <button class="glossary-btn" id="glossaryBtn" aria-haspopup="true" aria-expanded="false" aria-controls="glossaryPanel" title="Từ điển thuật ngữ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            <span>Từ khóa</span>
+          </button>
+        </div>
+
+        <div class="glossary-backdrop" id="glossaryBackdrop" hidden></div>
+        <div class="glossary-panel" id="glossaryPanel" role="dialog" aria-modal="true" aria-label="Từ điển thuật ngữ" hidden>
+          <div class="glossary-panel-header">
+            <h3>Từ điển thuật ngữ</h3>
+            <button id="glossaryCloseBtn" aria-label="Đóng từ điển" title="Đóng">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div class="glossary-body">
+            <div class="glossary-list" id="glossaryList" role="listbox" aria-label="Danh sách từ khóa"></div>
+            <div class="glossary-detail" id="glossaryDetail">
+              <p class="glossary-empty">Chọn một từ khóa bên trái để xem giải thích.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slides" id="slides"></div>
+      <div class="pagination" id="pagination"></div>
+    </main>
+
+    <aside class="chat">
+      <div class="chat-header">
+        <div class="chat-title">VLearn Tutor <span class="status-dot online" title="Trợ lý học theo ngữ cảnh"></span></div>
+        <div class="chat-actions">
+          <button class="icon" aria-label="Lịch sử trò chuyện" title="Lịch sử">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h10a5 5 0 0 1 0 10h-2"/><path d="M3 10l4-4M3 10l4 4"/></svg>
+          </button>
+          <button class="icon" aria-label="Cuộc trò chuyện mới" title="Thêm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <div class="slide-indicator">Trang slide: <span id="slideIndicator">1</span></div>
+        </div>
+      </div>
+      <div class="chat-body" id="chatBody"></div>
+      <div class="chat-input">
+        <input id="chatInput" aria-label="Nhập câu hỏi" placeholder="Nhập câu hỏi hoặc bôi đen tài liệu..." />
+        <button id="sendChat" aria-label="Gửi câu hỏi" title="Gửi">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l16-7-6 16-2-7-8-2z"/></svg>
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

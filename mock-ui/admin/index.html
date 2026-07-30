@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mock VLearn Admin — Upload Slide</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="brand">VLearn <span>Admin</span></div>
+      <div class="stepper" id="stepper">
+        <div class="step" data-step="upload"><span class="dot">1</span><span class="label">Upload</span></div>
+        <div class="step" data-step="pipeline"><span class="dot">2</span><span class="label">Xử lý AI</span></div>
+        <div class="step" data-step="review"><span class="dot">3</span><span class="label">Duyệt (HITL)</span></div>
+        <div class="step" data-step="done"><span class="dot">4</span><span class="label">Hoàn tất</span></div>
+      </div>
+    </header>
+
+    <main class="stage" id="stage">
+
+      <!-- SCREEN A: Upload -->
+      <section class="screen" id="screen-upload">
+        <div class="card upload-card">
+          <h1>Tải lên slide bài giảng</h1>
+          <p class="hint">Admin upload 1 file slide → hệ thống sẽ tự động OCR, phân tích và trích xuất thuật ngữ quan trọng kèm định nghĩa để học viên tra cứu khi đọc bài.</p>
+
+          <label class="dropzone" id="dropzone" for="fileInput">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+            <div class="dz-text"><strong>Kéo-thả file vào đây</strong> hoặc bấm để chọn (.pdf, .pptx)</div>
+            <input type="file" id="fileInput" hidden accept=".pdf,.pptx,.ppt" />
+          </label>
+
+          <div class="file-picked" id="filePicked" hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 2v6h6"/></svg>
+            <span id="fileName">day03-tu-chatbot-den-agentic-agent-react.pdf</span>
+            <span class="file-meta" id="fileMeta">46 trang · 3.2 MB</span>
+            <button class="link-btn" id="fileRemoveBtn">Chọn file khác</button>
+          </div>
+
+          <div class="upload-actions">
+            <button class="btn ghost" id="useSampleBtn">Dùng file mẫu có sẵn</button>
+            <button class="btn primary" id="startProcessBtn" disabled>Bắt đầu xử lý AI</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCREEN B: Pipeline (OCR -> Extract -> LLM phân tích -> xác định thuật ngữ -> tạo giải thích -> tổng hợp) -->
+      <section class="screen" id="screen-pipeline" hidden>
+        <div class="card pipeline-card">
+          <h1>Đang xử lý slide</h1>
+          <p class="hint">Mô phỏng pipeline — không gọi LLM thật, chỉ minh hoạ luồng xử lý theo <code>flow-b-upload-slide.mermaid</code>.</p>
+
+          <ol class="pipeline-list" id="pipelineList">
+            <li data-key="ocr"><span class="pl-icon"></span><span class="pl-text">OCR Service xử lý từng trang slide</span><span class="pl-status"></span></li>
+            <li data-key="extract"><span class="pl-icon"></span><span class="pl-text">Extract dữ liệu text từ từng trang slide</span><span class="pl-status"></span></li>
+            <li data-key="analyze"><span class="pl-icon"></span><span class="pl-text">LLM phân tích text của từng trang</span><span class="pl-status"></span></li>
+            <li data-key="identify"><span class="pl-icon"></span><span class="pl-text">LLM xác định thuật ngữ quan trọng trong trang slide</span><span class="pl-status"></span></li>
+            <li data-key="define"><span class="pl-icon"></span><span class="pl-text">LLM tạo giải thích cho từng thuật ngữ</span><span class="pl-status"></span></li>
+            <li data-key="aggregate"><span class="pl-icon"></span><span class="pl-text">Hệ thống tổng hợp danh sách thuật ngữ + định nghĩa</span><span class="pl-status"></span></li>
+          </ol>
+
+          <div class="pipeline-progress">
+            <div class="pipeline-progress-bar" id="pipelineProgressBar"></div>
+          </div>
+          <div class="pipeline-log" id="pipelineLog" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- SCREEN C: Review HITL -->
+      <section class="screen" id="screen-review" hidden>
+        <div class="review-layout">
+          <aside class="review-sidebar">
+            <h2>Trang slide</h2>
+            <p class="hint small">Admin kiểm tra danh sách thuật ngữ + định nghĩa do AI tạo (HITL). Sửa/xoá/thêm rồi duyệt từng trang.</p>
+            <div class="page-list" id="pageList"></div>
+            <div class="review-summary" id="reviewSummary"></div>
+          </aside>
+
+          <section class="review-main">
+            <div class="review-main-header">
+              <h1 id="reviewPageTitle">Trang 4 — Agentic Fit</h1>
+              <span class="badge" id="reviewPageBadge">Chờ duyệt</span>
+            </div>
+
+            <div class="term-table" id="termTable"></div>
+
+            <button class="btn dashed" id="addTermBtn">+ Thêm thuật ngữ thủ công</button>
+
+            <div class="review-actions">
+              <button class="btn ghost" id="rejectBtn">Cần chỉnh sửa thêm</button>
+              <button class="btn primary" id="approvePageBtn">✓ Đồng ý — Duyệt trang này</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="publish-bar" id="publishBar">
+          <div class="publish-status" id="publishStatus">0/0 trang đã duyệt</div>
+          <button class="btn success" id="publishBtn" disabled>Lưu &amp; Xuất bản slide cho học viên</button>
+        </div>
+      </section>
+
+      <!-- SCREEN D: Done -->
+      <section class="screen" id="screen-done" hidden>
+        <div class="card done-card">
+          <div class="done-icon">✓</div>
+          <h1>Slide đã sẵn sàng để học viên xem</h1>
+          <p class="hint" id="doneSummary"></p>
+          <div class="done-actions">
+            <button class="btn ghost" id="viewGlossaryBtn">Xem lại danh sách thuật ngữ đã lưu</button>
+            <button class="btn primary" id="uploadAnotherBtn">Tải lên slide khác</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
