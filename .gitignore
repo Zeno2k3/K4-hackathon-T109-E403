@@ -1,3 +1,15 @@
 .DS_Store
 node_modules/
 *.env
+
+# backend
+backend/uploads/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+backend/.venv/
+
+# frontend
+frontend/.next/
+frontend/node_modules/
