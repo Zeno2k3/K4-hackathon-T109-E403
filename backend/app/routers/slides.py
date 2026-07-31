@@ -1,7 +1,9 @@
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +13,7 @@ from app.db import get_session
 from app.models.domain_tag import DomainTag
 from app.models.slide import Slide, SlidePage, SlidePageStatus, SlideStatus
 from app.models.term import Term
-from app.schemas.slide import SlideDetail
+from app.schemas.slide import SlideDetail, SlidePageOut, SlideSummary
 from app.services.matching import composite_key
 from app.services.pipeline import PipelineService, get_pipeline_service
 
@@ -28,6 +30,13 @@ async def _get_slide_with_pages(slide_id: uuid.UUID, session: AsyncSession) -> S
     if slide is None:
         raise HTTPException(status_code=404, detail="Slide not found")
     return slide
+
+
+@router.get("", response_model=list[SlideSummary])
+async def list_slides(session: AsyncSession = Depends(get_session)) -> list[SlideSummary]:
+    result = await session.execute(select(Slide).order_by(Slide.uploaded_at.desc()))
+    slides = result.scalars().all()
+    return [SlideSummary.model_validate(slide) for slide in slides]
 
 
 @router.post("", response_model=SlideDetail, status_code=201)
@@ -48,6 +57,39 @@ async def upload_slide(
 async def get_slide(slide_id: uuid.UUID, session: AsyncSession = Depends(get_session)) -> SlideDetail:
     slide = await _get_slide_with_pages(slide_id, session)
     return SlideDetail.model_validate(slide)
+
+
+@router.get("/{slide_id}/file")
+async def get_slide_file(slide_id: uuid.UUID, session: AsyncSession = Depends(get_session)) -> FileResponse:
+    slide = await session.get(Slide, slide_id)
+    if slide is None:
+        raise HTTPException(status_code=404, detail="Slide not found")
+
+    file_path = Path(slide.file_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Slide file not found on disk")
+
+    return FileResponse(file_path, media_type="application/pdf", filename=slide.filename)
+
+
+@router.get("/{slide_id}/pages/{page_number}", response_model=SlidePageOut)
+async def get_published_page(
+    slide_id: uuid.UUID, page_number: int, session: AsyncSession = Depends(get_session)
+) -> SlidePageOut:
+    slide = await session.get(Slide, slide_id)
+    if slide is None or slide.status != SlideStatus.published:
+        raise HTTPException(status_code=404, detail="Slide not published")
+
+    result = await session.execute(
+        select(SlidePage)
+        .where(SlidePage.slide_id == slide_id, SlidePage.page_number == page_number)
+        .options(selectinload(SlidePage.terms))
+    )
+    page = result.scalar_one_or_none()
+    if page is None:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    return SlidePageOut.model_validate(page)
 
 
 @router.post("/{slide_id}/publish", response_model=SlideDetail)
