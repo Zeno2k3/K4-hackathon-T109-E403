@@ -8,6 +8,9 @@ from sqlalchemy.pool import NullPool
 
 from app.db import Base, get_session
 from app.main import app
+from app.services.llm.openai_provider import get_term_definer, get_term_identifier
+from app.services.llm.stub import get_term_definer as get_stub_term_definer
+from app.services.llm.stub import get_term_identifier as get_stub_term_identifier
 
 TEST_DATABASE_URL = "postgresql+asyncpg://vlearn:changeme@localhost:5432/glossary_test"
 
@@ -33,6 +36,10 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield db_session
 
     app.dependency_overrides[get_session] = override_get_session
+    # Never let integration tests hit the real LLM provider — deterministic,
+    # free, and matches backend-spec.md's Testing Strategy.
+    app.dependency_overrides[get_term_identifier] = get_stub_term_identifier
+    app.dependency_overrides[get_term_definer] = get_stub_term_definer
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
