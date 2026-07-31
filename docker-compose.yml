@@ -11,7 +11,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vlearn}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vlearn} -d ${POSTGRES_DB:-glossary}"]
       interval: 5s
       timeout: 5s
       retries: 10
