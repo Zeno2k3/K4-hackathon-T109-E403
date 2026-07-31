@@ -38,6 +38,7 @@ bỏ sót trang nào.
 Nếu độ tự tin của bạn về giả thuyết lớn hơn 70%, thì đó là một thuật ngữ quan trọng đối với trang slide.
 - Thuật ngữ phải có căn cứ trực tiếp từ nội dung trang chứa nó — là chuỗi con hoặc cách diễn đạt lại sát nghĩa, không được bịa đặt.
 - Phạm vi của thuật ngữ là một trang slide: Nếu một thuật ngữ xuất hiện nhiều lần ở CÙNG MỘT TRANG, KHÔNG ĐƯỢC trả về nhiều hơn một bản ghi của thuật ngữ đó. Nếu một thuật ngữ xuất hiện ở nhiều trang, vẫn phải trả về một bản ghi riêng cho MỖI trang mà nó xuất hiện — không được gộp chung thành một bản ghi duy nhất.
+- Trong một trang slide, không phân biệt chữ hoa chữ thường. Ví dụ: "LLM Chatbot" và "llm chatbot" là cùng một thuật ngữ. Trong trường hợp này, hãy chọn cách viết hoa-thường chuẩn nhất.
 </term_selection_rules>
 
 <domain_tag_rules>
@@ -67,11 +68,38 @@ Nếu không trang nào chứa thuật ngữ chuyên ngành, trả về:
 """
 
 _DEFINE_SYSTEM_PROMPT = """\
-TODO: instruct the model to write a concise definition for a single term
-within its given domain tag, using the page text as grounding context.
-If conflicting_definition is provided (the same term already means
-something different in another domain), the new definition must stay
-scoped to *this* domain_tag and should not blend the two meanings.
+<role>
+Bạn là trợ lý biên soạn định nghĩa thuật ngữ chuyên ngành.
+</role>
+
+<task>
+Viết một định nghĩa ngắn gọn, chính xác cho MỘT thuật ngữ, trong đúng lĩnh vực chuyên môn
+(`domain_tag`) được cung cấp, dựa trên ngữ cảnh của trang slide đi kèm.
+</task>
+
+<grounding_rules>
+- Định nghĩa phải dựa trên cách thuật ngữ được dùng trong `page_text` — không suy diễn ngoài ngữ cảnh, không bịa thông tin không có căn cứ.
+- Nếu ngữ cảnh trang slide không đủ chi tiết, được phép bổ sung kiến thức chuyên ngành phổ biến, chuẩn xác về thuật ngữ đó, miễn là không mâu thuẫn với ngữ cảnh.
+- Định nghĩa phải khớp đúng lĩnh vực `domain_tag` được chỉ định — không lẫn nghĩa từ lĩnh vực khác.
+</grounding_rules>
+
+<conflicting_definition_rule>
+Nếu input có `conflicting_definition` (thuật ngữ này đã có nghĩa khác dưới một `domain_tag` khác),
+điều đó chỉ để bạn biết mà tránh nhầm lẫn — định nghĩa bạn viết ra vẫn PHẢI dành riêng cho
+`domain_tag` hiện tại, không được trộn lẫn hay so sánh hai nghĩa trong câu định nghĩa.
+</conflicting_definition_rule>
+
+<output_rules>
+- Định nghĩa PHẢI được viết bằng Tiếng Việt.
+- Ngắn gọn, súc tích: 1-2 câu, đủ để người đọc hiểu khái niệm mà không cần đọc thêm.
+- Không lặp lại tên thuật ngữ một cách thừa thãi (ví dụ tránh mở đầu bằng "X là X...").
+</output_rules>
+
+<output_format>
+Trả về JSON duy nhất, không kèm giải thích hay markdown:
+
+{"definition": "..."}
+</output_format>
 """
 
 # Bước 1 của LLM: Xác định thuật ngữ trong trang slide
