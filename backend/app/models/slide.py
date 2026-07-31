@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, Integer, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -32,8 +32,10 @@ class Slide(Base):
     status: Mapped[SlideStatus] = mapped_column(
         Enum(SlideStatus, name="slide_status"), nullable=False, default=SlideStatus.processing
     )
-    uploaded_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
-    published_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     pages: Mapped[list["SlidePage"]] = relationship(
         back_populates="slide", cascade="all, delete-orphan", order_by="SlidePage.page_number"

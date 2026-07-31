@@ -8,7 +8,7 @@ from app.db import get_session
 from app.models.slide import SlidePage, SlidePageStatus
 from app.models.term import PageTerm, TermSource
 from app.schemas.page_term import PageTermCreate, PageTermUpdate
-from app.schemas.slide import PageTermOut
+from app.schemas.slide import PageTermOut, SlidePageOut
 
 router = APIRouter(prefix="/api/slides/{slide_id}/pages/{page_id}", tags=["pages"])
 
@@ -98,3 +98,29 @@ async def delete_term(
     await session.delete(term)
     await session.commit()
     return Response(status_code=204)
+
+
+@router.post("/approve", response_model=SlidePageOut)
+async def approve_page(
+    slide_id: uuid.UUID,
+    page_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> SlidePageOut:
+    page = await _get_page(slide_id, page_id, session)
+    page.status = SlidePageStatus.approved
+    await session.commit()
+    await session.refresh(page, attribute_names=["terms"])
+    return SlidePageOut.model_validate(page)
+
+
+@router.post("/reject", response_model=SlidePageOut)
+async def reject_page(
+    slide_id: uuid.UUID,
+    page_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> SlidePageOut:
+    page = await _get_page(slide_id, page_id, session)
+    page.status = SlidePageStatus.pending
+    await session.commit()
+    await session.refresh(page, attribute_names=["terms"])
+    return SlidePageOut.model_validate(page)
