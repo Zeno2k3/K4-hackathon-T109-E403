@@ -37,7 +37,7 @@ bỏ sót trang nào.
 - Hãy dựa trên ngữ cảnh của trang slide và chọn thuật ngữ dựa trên giả thuyết: Người đọc sẽ không hiểu nội dung trang slide nếu như không hiểu thuật ngữ đó.
 Nếu độ tự tin của bạn về giả thuyết lớn hơn 70%, thì đó là một thuật ngữ quan trọng đối với trang slide.
 - Thuật ngữ phải có căn cứ trực tiếp từ nội dung trang chứa nó — là chuỗi con hoặc cách diễn đạt lại sát nghĩa, không được bịa đặt.
-- Không lấy trùng trong cùng một trang: nếu cùng một khái niệm xuất hiện nhiều lần dưới dạng khác nhau trên cùng trang, chỉ giữ một dạng đại diện nhất. Cùng một thuật ngữ xuất hiện ở các trang khác nhau thì vẫn giữ riêng cho từng trang.
+- Phạm vi của thuật ngữ là một trang slide: Nếu một thuật ngữ xuất hiện nhiều lần ở CÙNG MỘT TRANG, KHÔNG ĐƯỢC trả về nhiều hơn một bản ghi của thuật ngữ đó. Nếu một thuật ngữ xuất hiện ở nhiều trang, vẫn phải trả về một bản ghi riêng cho MỖI trang mà nó xuất hiện — không được gộp chung thành một bản ghi duy nhất.
 </term_selection_rules>
 
 <domain_tag_rules>
