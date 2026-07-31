@@ -33,7 +33,7 @@ something different in another domain), the new definition must stay
 scoped to *this* domain_tag and should not blend the two meanings.
 """
 
-
+# Bước 1 của LLM: Xác định thuật ngữ trong trang slide
 class OpenAITermIdentifier(TermIdentifier):
     def __init__(self, client: AsyncOpenAI | None = None, model: str | None = None) -> None:
         self._client = client or AsyncOpenAI(api_key=settings.openai_api_key)
@@ -65,7 +65,7 @@ class OpenAITermIdentifier(TermIdentifier):
             f"Page text:\n{page_text}"
         )
 
-
+# Bước 2 của LLM: Generate định nghĩa cho terms
 class OpenAITermDefiner(TermDefiner):
     def __init__(self, client: AsyncOpenAI | None = None, model: str | None = None) -> None:
         self._client = client or AsyncOpenAI(api_key=settings.openai_api_key)
