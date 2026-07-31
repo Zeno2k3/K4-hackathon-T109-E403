@@ -1,0 +1,31 @@
+flowchart TD
+    A[Admin upload 1 file slide] --> B[Extract text từng trang slide<br/>PDF text extraction trực tiếp]
+    B --> E[LLM - job 1: xác định thuật ngữ<br/>quan trọng + gắn domain tag<br/>ưu tiên tái dùng tag đã có<br/>quyết định AI trung tâm]
+    E --> F1{Với mỗi cặp term+domain tag:<br/>đã có trong CSDL thuật ngữ?}
+    F1 -- Có, cùng term + cùng domain tag --> F1H[Dùng định nghĩa có sẵn<br/>gắn nhãn: Từ CSDL]
+    F1 -- Chưa có, term mới hoàn toàn --> F2[LLM - job 2: tạo định nghĩa<br/>chỉ cho thuật ngữ mới<br/>gắn nhãn: AI tạo mới]
+    F1 -- Term đã có nhưng domain tag khác --> F3[LLM - job 2: tạo định nghĩa<br/>nghĩa khác của thuật ngữ đã có<br/>gắn nhãn: AI tạo mới + cảnh báo<br/>đã tồn tại ở lĩnh vực khác]
+    F1H --> G[Hệ thống tổng hợp danh sách<br/>thuật ngữ + định nghĩa + nguồn gốc<br/>+ domain tag chip, đánh dấu tag mới]
+    F2 --> G
+    F3 --> G
+    G --> H[Admin kiểm tra danh sách thuật ngữ<br/>và định nghĩa - HITL<br/>badge Từ CSDL / AI tạo mới<br/>+ domain tag chip + cảnh báo nghĩa khác]
+    H --> I{Admin có đồng ý<br/>với kết quả?}
+    I -- Cần chỉnh sửa --> J[Admin sửa/xoá/thêm thuật ngữ<br/>định nghĩa hoặc domain tag]
+    J --> H
+    I -- Đồng ý --> K[Lưu thuật ngữ + định nghĩa + domain tag<br/>gắn với trang slide tương ứng<br/>+ ghi/cập nhật CSDL thuật ngữ và domain tag dùng chung]
+    K --> L[Slide sẵn sàng để học viên xem]
+
+    classDef default fill:#ffffff,stroke:#000000,color:#000000;
+    style A fill:#ffffff,stroke:#000000,color:#000000
+    style B fill:#ffffff,stroke:#000000,color:#000000
+    style E fill:#ffffff,stroke:#000000,color:#000000
+    style F1 fill:#ffffff,stroke:#000000,color:#000000
+    style F1H fill:#ffffff,stroke:#000000,color:#000000
+    style F2 fill:#ffffff,stroke:#000000,color:#000000
+    style F3 fill:#ffffff,stroke:#000000,color:#000000
+    style G fill:#ffffff,stroke:#000000,color:#000000
+    style H fill:#ffffff,stroke:#000000,color:#000000
+    style I fill:#ffffff,stroke:#000000,color:#000000
+    style J fill:#ffffff,stroke:#000000,color:#000000
+    style K fill:#ffffff,stroke:#000000,color:#000000
+    style L fill:#ffffff,stroke:#000000,color:#000000
