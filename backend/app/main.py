@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import slides
+from app.routers import pages, slides
 
 app = FastAPI(title="Glossary DB-First Backend")
 
@@ -14,6 +14,7 @@ app.add_middleware(
 )
 
 app.include_router(slides.router)
+app.include_router(pages.router)
 
 
 @app.get("/health")
