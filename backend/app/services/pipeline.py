@@ -11,7 +11,8 @@ from app.models.slide import Slide, SlidePage, SlidePageStatus, SlideStatus
 from app.models.term import PageTerm, Term, TermSource
 from app.services.extraction import extract_pages
 from app.services.llm.interface import ConflictingDefinition, PageInput, TermDefiner, TermIdentifier
-from app.services.llm.openai_provider import get_term_definer, get_term_identifier
+from app.services.llm.openai_provider import get_term_identifier
+from app.services.llm.stub import get_term_definer
 from app.services.matching import composite_key, find_conflicting_domain_tag
 
 _IDENTIFY_BATCH_SIZE = 10
