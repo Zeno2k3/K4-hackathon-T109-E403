@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     uploads_dir: str = "uploads"
     cors_origins: str = "http://localhost:3000"
 
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4o-mini"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
