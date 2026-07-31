@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { CourseSection, Material, SectionCompletionStatus } from './types';
+import { SLIDE_STATUS_DOT, SLIDE_STATUS_LABEL } from './statusLabel';
 
 type CourseSidebarProps = {
   sections: CourseSection[];
@@ -208,8 +209,10 @@ export function CourseSidebar({
                                 {material.title}
                               </span>
                             </div>
-                            <div className="mt-0.5 pl-[22px] text-[11px] text-muted dark:text-slate-500">
-                              {material.slideCount} trang
+                            <div className="mt-0.5 pl-[22px] flex items-center gap-1.5 text-[11px] text-muted dark:text-slate-500">
+                              <span>{material.slideCount} trang</span>
+                              <span className={`w-1.5 h-1.5 rounded-full flex-none ${SLIDE_STATUS_DOT[material.status]}`} aria-hidden="true" />
+                              <span>{SLIDE_STATUS_LABEL[material.status]}</span>
                             </div>
                             {material.completed && (
                               <span

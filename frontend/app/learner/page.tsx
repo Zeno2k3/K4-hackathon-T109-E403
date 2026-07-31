@@ -1,17 +1,34 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import useSWR from 'swr';
 import { useTheme } from '@/lib/useTheme';
+import { listSlides, getSlide, getSlideFileUrl } from '@/lib/api';
 import { LearnerHeader } from '@/components/learner/LearnerHeader';
 import { CourseSidebar } from '@/components/learner/CourseSidebar';
 import { ViewerToolbar } from '@/components/learner/ViewerToolbar';
-import { SlidePagesScroller, type SlidePagesScrollerHandle } from '@/components/learner/SlidePagesScroller';
+import type { SlidePagesScrollerHandle } from '@/components/learner/SlidePagesScroller';
 import { Pagination } from '@/components/learner/Pagination';
 import { GlossaryPanel } from '@/components/learner/GlossaryPanel';
 import { TutorChatPanel } from '@/components/learner/TutorChatPanel';
-import { COURSE_CODE, COURSE_SECTIONS, FALLBACK_REPLY, KEYWORD_DEFS, WELCOME_MESSAGE } from '@/components/learner/mockData';
-import type { ChatMessage, HighlightBox, Material, PendingQuote, ViewerMode } from '@/components/learner/types';
+import { SLIDE_STATUS_LABEL } from '@/components/learner/statusLabel';
+import { WELCOME_MESSAGE, FALLBACK_REPLY } from '@/components/learner/mockData';
+import type { ChatMessage, CourseSection, HighlightBox, Material, PendingQuote, ViewerMode } from '@/components/learner/types';
+import type { PageTerm } from '@/lib/types';
+
+const SlidePagesScroller = dynamic(
+  () => import('@/components/learner/SlidePagesScroller').then((m) => m.SlidePagesScroller),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex-1 min-h-0 flex items-center justify-center text-muted dark:text-slate-500 text-sm">
+        Đang tải trình xem slide...
+      </div>
+    ),
+  },
+);
 
 let messageSeq = 0;
 function nextMessageId(): string {
@@ -19,22 +36,14 @@ function nextMessageId(): string {
   return `msg-${messageSeq}`;
 }
 
-function findMaterial(materialId: string): Material | null {
-  for (const section of COURSE_SECTIONS) {
-    const material = section.materials.find((m) => m.id === materialId);
-    if (material) return material;
-  }
-  return null;
-}
-
-const DEFAULT_MATERIAL_ID = COURSE_SECTIONS[0].materials[0].id;
-
 export default function LearnerPage() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
 
+  const { data: slides, error: slidesError, isLoading: slidesLoading } = useSWR('learner-slides', listSlides);
+
   const [lang, setLang] = useState<'vi' | 'en'>('vi');
-  const [activeMaterialId, setActiveMaterialId] = useState(DEFAULT_MATERIAL_ID);
+  const [activeMaterialId, setActiveMaterialId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(100);
   const [mode, setMode] = useState<ViewerMode>('read');
@@ -58,11 +67,61 @@ export default function LearnerPage() {
 
   const scrollerRef = useRef<SlidePagesScrollerHandle>(null);
 
-  const material = useMemo(() => findMaterial(activeMaterialId), [activeMaterialId]);
-  const totalPages = material?.slideCount ?? 1;
+  useEffect(() => {
+    if (slides && slides.length > 0 && !activeMaterialId) {
+      setActiveMaterialId(slides[0].id);
+    }
+  }, [slides, activeMaterialId]);
 
-  const materialHighlights = highlights[activeMaterialId] ?? {};
-  const materialNotes = notes[activeMaterialId] ?? {};
+  const { data: slideDetail } = useSWR(
+    activeMaterialId ? `slide-${activeMaterialId}` : null,
+    () => getSlide(activeMaterialId as string),
+  );
+
+  const materials: Material[] = useMemo(
+    () => (slides ?? []).map((s) => ({ id: s.id, title: s.filename, slideCount: s.page_count, status: s.status })),
+    [slides],
+  );
+
+  const sections: CourseSection[] = useMemo(
+    () => [
+      {
+        id: 'uploaded',
+        title: 'Slide đã tải lên',
+        completionStatus:
+          materials.length > 0 && materials.every((m) => m.status === 'published') ? 'completed' : 'published',
+        materials,
+      },
+    ],
+    [materials],
+  );
+
+  const material = materials.find((m) => m.id === activeMaterialId) ?? null;
+  const totalPages = material?.slideCount ?? 1;
+  const fileUrl = activeMaterialId ? getSlideFileUrl(activeMaterialId) : '';
+
+  const pageTerms: Record<number, PageTerm[]> = useMemo(() => {
+    const map: Record<number, PageTerm[]> = {};
+    slideDetail?.pages.forEach((p) => {
+      map[p.page_number] = p.terms;
+    });
+    return map;
+  }, [slideDetail]);
+
+  const glossaryTerms = useMemo(() => {
+    const map: Record<string, { term: string; def: string }> = {};
+    (pageTerms[page] ?? []).forEach((t) => {
+      map[t.term_display] = { term: t.term_display, def: t.definition };
+    });
+    return map;
+  }, [pageTerms, page]);
+
+  useEffect(() => {
+    setGlossaryTerm(null);
+  }, [page]);
+
+  const materialHighlights = highlights[activeMaterialId ?? ''] ?? {};
+  const materialNotes = notes[activeMaterialId ?? ''] ?? {};
 
   const noteCount = (materialNotes[page] ? 1 : 0) + (materialHighlights[page]?.length ?? 0);
   const pageLabel = `Trang ${page} · ${noteCount} note`;
@@ -81,12 +140,14 @@ export default function LearnerPage() {
   }
 
   function addHighlight(pageNumber: number, box: HighlightBox) {
+    if (!activeMaterialId) return;
+    const materialId = activeMaterialId;
     setHighlights((prev) => {
-      const forMaterial = prev[activeMaterialId] ?? {};
+      const forMaterial = prev[materialId] ?? {};
       const forPage = forMaterial[pageNumber] ?? [];
       return {
         ...prev,
-        [activeMaterialId]: { ...forMaterial, [pageNumber]: [...forPage, box] },
+        [materialId]: { ...forMaterial, [pageNumber]: [...forPage, box] },
       };
     });
     setPendingQuote({ page: pageNumber, text: 'đoạn đã bôi đen' });
@@ -94,37 +155,43 @@ export default function LearnerPage() {
   }
 
   function undoLastHighlight() {
+    if (!activeMaterialId) return;
+    const materialId = activeMaterialId;
     setHighlights((prev) => {
-      const forMaterial = prev[activeMaterialId] ?? {};
+      const forMaterial = prev[materialId] ?? {};
       const forPage = forMaterial[page] ?? [];
       if (forPage.length === 0) return prev;
       return {
         ...prev,
-        [activeMaterialId]: { ...forMaterial, [page]: forPage.slice(0, -1) },
+        [materialId]: { ...forMaterial, [page]: forPage.slice(0, -1) },
       };
     });
   }
 
   function clearPageAnnotations() {
+    if (!activeMaterialId) return;
+    const materialId = activeMaterialId;
     setHighlights((prev) => {
-      const forMaterial = { ...(prev[activeMaterialId] ?? {}) };
+      const forMaterial = { ...(prev[materialId] ?? {}) };
       delete forMaterial[page];
-      return { ...prev, [activeMaterialId]: forMaterial };
+      return { ...prev, [materialId]: forMaterial };
     });
     setNotes((prev) => {
-      const forMaterial = { ...(prev[activeMaterialId] ?? {}) };
+      const forMaterial = { ...(prev[materialId] ?? {}) };
       delete forMaterial[page];
-      return { ...prev, [activeMaterialId]: forMaterial };
+      return { ...prev, [materialId]: forMaterial };
     });
   }
 
   function handleNote() {
+    if (!activeMaterialId) return;
+    const materialId = activeMaterialId;
     const current = materialNotes[page] ?? '';
     const value = window.prompt('Nhập ghi chú cho slide này:', current);
     if (value === null) return;
     setNotes((prev) => ({
       ...prev,
-      [activeMaterialId]: { ...(prev[activeMaterialId] ?? {}), [page]: value },
+      [materialId]: { ...(prev[materialId] ?? {}), [page]: value },
     }));
   }
 
@@ -151,7 +218,7 @@ export default function LearnerPage() {
     setPendingQuote(null);
 
     setTimeout(() => {
-      const known = KEYWORD_DEFS[text];
+      const known = glossaryTerms[text];
       const replyText = known ? known.def : FALLBACK_REPLY;
       setChatMessages((prev) => [
         ...prev,
@@ -165,11 +232,35 @@ export default function LearnerPage() {
     setPendingQuote(null);
   }
 
+  if (slidesLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-bg dark:bg-slate-950">
+        <p className="text-muted dark:text-slate-500 text-sm">Đang tải danh sách slide...</p>
+      </div>
+    );
+  }
+
+  if (slidesError) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-bg dark:bg-slate-950">
+        <p className="text-brand-red text-sm">Không thể tải danh sách slide.</p>
+      </div>
+    );
+  }
+
+  if (!slides || slides.length === 0) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-bg dark:bg-slate-950">
+        <p className="text-muted dark:text-slate-500 text-sm">Chưa có slide nào được tải lên.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-bg dark:bg-slate-950 overflow-hidden">
       <LearnerHeader
         fileName={material?.title ?? ''}
-        courseCode={COURSE_CODE}
+        courseCode={material ? SLIDE_STATUS_LABEL[material.status] : ''}
         theme={theme}
         lang={lang}
         onBack={() => router.push('/')}
@@ -181,8 +272,8 @@ export default function LearnerPage() {
 
       <div className="flex-1 min-h-0 flex gap-3 p-3 max-w-[1800px] mx-auto w-full">
         <CourseSidebar
-          sections={COURSE_SECTIONS}
-          activeMaterialId={activeMaterialId}
+          sections={sections}
+          activeMaterialId={activeMaterialId ?? ''}
           onSelectMaterial={selectMaterial}
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -205,22 +296,27 @@ export default function LearnerPage() {
             onUndo={undoLastHighlight}
             onClear={clearPageAnnotations}
             onOpenGlossary={() => setGlossaryOpen(true)}
+            glossaryDisabled={Object.keys(glossaryTerms).length === 0}
           />
 
-          <SlidePagesScroller
-            key={activeMaterialId}
-            ref={scrollerRef}
-            materialTitle={material?.title ?? ''}
-            initialPage={page}
-            totalPages={totalPages}
-            zoom={zoom}
-            mode={mode}
-            highlights={materialHighlights}
-            notes={materialNotes}
-            onAddHighlight={addHighlight}
-            onKeywordSelect={handleKeywordSelect}
-            onActivePageChange={setPage}
-          />
+          {activeMaterialId && (
+            <SlidePagesScroller
+              key={activeMaterialId}
+              ref={scrollerRef}
+              materialTitle={material?.title ?? ''}
+              fileUrl={fileUrl}
+              initialPage={page}
+              totalPages={totalPages}
+              zoom={zoom}
+              mode={mode}
+              highlights={materialHighlights}
+              notes={materialNotes}
+              pageTerms={pageTerms}
+              onAddHighlight={addHighlight}
+              onKeywordSelect={handleKeywordSelect}
+              onActivePageChange={setPage}
+            />
+          )}
 
           <Pagination page={page} total={totalPages} onPrev={goPrev} onNext={goNext} />
         </main>
@@ -244,7 +340,7 @@ export default function LearnerPage() {
       <GlossaryPanel
         open={glossaryOpen}
         onClose={() => setGlossaryOpen(false)}
-        terms={KEYWORD_DEFS}
+        terms={glossaryTerms}
         selectedTerm={glossaryTerm}
         onSelectTerm={setGlossaryTerm}
       />

@@ -1,3 +1,5 @@
+import type { SlideStatus } from '@/lib/types';
+
 /** Content state of a section, independent of whether the learner is currently viewing it. */
 export type SectionCompletionStatus = 'completed' | 'published' | 'locked';
 
@@ -5,6 +7,7 @@ export type Material = {
   id: string;
   title: string;
   slideCount: number;
+  status: SlideStatus;
   completed?: boolean;
 };
 
@@ -27,7 +30,7 @@ export type HighlightBox = {
 export type GlossaryTerm = {
   term: string;
   def: string;
-  example: string;
+  example?: string;
 };
 
 export type ChatMessageKind = 'user' | 'bot';

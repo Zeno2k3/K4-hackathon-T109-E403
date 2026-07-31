@@ -88,14 +88,16 @@ export function GlossaryPanel({ open, onClose, terms, selectedTerm, onSelectTerm
                 <p className="m-0 text-[15px] leading-relaxed text-[#33445e] dark:text-slate-300 max-w-[560px]">
                   {active.def}
                 </p>
-                <div className="mt-5 max-w-[560px] bg-[#f6f8fb] dark:bg-slate-800 border-l-[3px] border-brand-blue rounded-lg px-4 py-3.5">
-                  <span className="block text-[11px] font-bold uppercase tracking-wide text-brand-blue mb-1">
-                    Ví dụ
-                  </span>
-                  <p className="m-0 text-[13.5px] leading-relaxed text-[#45536c] dark:text-slate-400">
-                    {active.example}
-                  </p>
-                </div>
+                {active.example && (
+                  <div className="mt-5 max-w-[560px] bg-[#f6f8fb] dark:bg-slate-800 border-l-[3px] border-brand-blue rounded-lg px-4 py-3.5">
+                    <span className="block text-[11px] font-bold uppercase tracking-wide text-brand-blue mb-1">
+                      Ví dụ
+                    </span>
+                    <p className="m-0 text-[13.5px] leading-relaxed text-[#45536c] dark:text-slate-400">
+                      {active.example}
+                    </p>
+                  </div>
+                )}
               </>
             ) : (
               <p className="italic text-muted dark:text-slate-500">Chọn một từ khóa bên trái để xem giải thích.</p>

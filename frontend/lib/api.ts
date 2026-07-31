@@ -43,6 +43,10 @@ export function getSlide(slideId: string): Promise<SlideDetail> {
   return request<SlideDetail>(`/api/slides/${slideId}`);
 }
 
+export function getSlideFileUrl(slideId: string): string {
+  return `${API_BASE_URL}/api/slides/${slideId}/file`;
+}
+
 export async function uploadSlide(file: File): Promise<SlideDetail> {
   const formData = new FormData();
   formData.append('file', file);

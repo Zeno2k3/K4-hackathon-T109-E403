@@ -17,6 +17,7 @@ type ViewerToolbarProps = {
   onUndo: () => void;
   onClear: () => void;
   onOpenGlossary: () => void;
+  glossaryDisabled?: boolean;
 };
 
 const MODE_ITEMS: { key: ViewerMode; label: string; path: string }[] = [
@@ -39,6 +40,7 @@ export function ViewerToolbar({
   onUndo,
   onClear,
   onOpenGlossary,
+  glossaryDisabled = false,
 }: ViewerToolbarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -192,9 +194,11 @@ export function ViewerToolbar({
         <button
           type="button"
           onClick={onOpenGlossary}
+          disabled={glossaryDisabled}
           aria-haspopup="true"
-          title="Từ điển thuật ngữ"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#cdd9ee] dark:border-blue-800 bg-white dark:bg-slate-800 text-brand-blue dark:text-blue-300 text-[13px] font-semibold hover:bg-[#f5f9ff] dark:hover:bg-slate-700"
+          aria-disabled={glossaryDisabled}
+          title={glossaryDisabled ? 'Trang này chưa có thuật ngữ' : 'Từ điển thuật ngữ'}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#cdd9ee] dark:border-blue-800 bg-white dark:bg-slate-800 text-brand-blue dark:text-blue-300 text-[13px] font-semibold hover:bg-[#f5f9ff] dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
