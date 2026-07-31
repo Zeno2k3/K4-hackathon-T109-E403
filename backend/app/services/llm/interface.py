@@ -3,7 +3,13 @@ from typing import Protocol
 from pydantic import BaseModel
 
 
+class PageInput(BaseModel):
+    page_number: int
+    text: str
+
+
 class IdentifiedTerm(BaseModel):
+    page_number: int
     term: str
     domain_tag: str
 
@@ -13,7 +19,7 @@ class IdentifyResult(BaseModel):
 
 
 class TermIdentifier(Protocol):
-    async def identify(self, page_text: str, known_domain_tags: list[str]) -> IdentifyResult: ...
+    async def identify(self, pages: list[PageInput], known_domain_tags: list[str]) -> IdentifyResult: ...
 
 
 class ConflictingDefinition(BaseModel):

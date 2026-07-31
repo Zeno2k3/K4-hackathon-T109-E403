@@ -5,6 +5,7 @@ from app.services.llm.interface import (
     DefineResult,
     IdentifiedTerm,
     IdentifyResult,
+    PageInput,
 )
 
 _CAPITALIZED_WORD = re.compile(r"\b[A-Z][a-zA-Z]{2,}\b")
@@ -19,13 +20,18 @@ class StubTermIdentifier:
     the pipeline end-to-end.
     """
 
-    async def identify(self, page_text: str, known_domain_tags: list[str]) -> IdentifyResult:
+    async def identify(self, pages: list[PageInput], known_domain_tags: list[str]) -> IdentifyResult:
         domain_tag = known_domain_tags[0] if known_domain_tags else "General"
-        seen: list[str] = []
-        for word in _CAPITALIZED_WORD.findall(page_text):
-            if word not in seen:
-                seen.append(word)
-        terms = [IdentifiedTerm(term=word, domain_tag=domain_tag) for word in seen[:_MAX_TERMS_PER_PAGE]]
+        terms: list[IdentifiedTerm] = []
+        for page in pages:
+            seen: list[str] = []
+            for word in _CAPITALIZED_WORD.findall(page.text):
+                if word not in seen:
+                    seen.append(word)
+            terms.extend(
+                IdentifiedTerm(page_number=page.page_number, term=word, domain_tag=domain_tag)
+                for word in seen[:_MAX_TERMS_PER_PAGE]
+            )
         return IdentifyResult(terms=terms)
 
 

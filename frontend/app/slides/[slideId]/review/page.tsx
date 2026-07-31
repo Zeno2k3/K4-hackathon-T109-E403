@@ -194,18 +194,31 @@ export default function ReviewPage() {
               )}
 
               <div className="flex flex-col gap-2.5 overflow-auto flex-1">
-                {activePage.terms.map((term) => (
-                  <TermRow
-                    key={term.id}
-                    ref={term.id === newRowFocusId ? (el) => el?.focus() : undefined}
-                    term={term}
-                    onChange={(patch) => {
-                      const merged = { ...term, ...patch };
-                      scheduleTermUpdate(activePage.id, term.id, merged);
-                    }}
-                    onRemove={() => handleRemoveTerm(term.id)}
-                  />
-                ))}
+                {activePage.terms.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center gap-1.5 py-14 px-6 border border-dashed border-border rounded-xl text-muted">
+                    <p className="text-sm font-semibold text-ink">
+                      Không phát hiện thuật ngữ nào trên trang này
+                    </p>
+                    <p className="text-[13px] max-w-[380px]">
+                      AI không tìm thấy thuật ngữ đáng chú ý trong nội dung trang. Bạn có thể thêm
+                      thủ công nếu thấy cần thiết, hoặc duyệt trang này nếu đúng là không có thuật
+                      ngữ nào.
+                    </p>
+                  </div>
+                ) : (
+                  activePage.terms.map((term) => (
+                    <TermRow
+                      key={term.id}
+                      ref={term.id === newRowFocusId ? (el) => el?.focus() : undefined}
+                      term={term}
+                      onChange={(patch) => {
+                        const merged = { ...term, ...patch };
+                        scheduleTermUpdate(activePage.id, term.id, merged);
+                      }}
+                      onRemove={() => handleRemoveTerm(term.id)}
+                    />
+                  ))
+                )}
               </div>
 
               <Button variant="dashed" className="mt-3.5 mb-1" onClick={handleAddTerm}>

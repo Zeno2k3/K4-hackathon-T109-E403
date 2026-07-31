@@ -10,9 +10,11 @@ from app.models.domain_tag import DomainTag
 from app.models.slide import Slide, SlidePage, SlidePageStatus, SlideStatus
 from app.models.term import PageTerm, Term, TermSource
 from app.services.extraction import extract_pages
-from app.services.llm.interface import ConflictingDefinition, TermDefiner, TermIdentifier
-from app.services.llm.stub import get_term_definer, get_term_identifier
+from app.services.llm.interface import ConflictingDefinition, PageInput, TermDefiner, TermIdentifier
+from app.services.llm.openai_provider import get_term_definer, get_term_identifier
 from app.services.matching import composite_key, find_conflicting_domain_tag
+
+_IDENTIFY_BATCH_SIZE = 10
 
 
 class PipelineService:
@@ -39,6 +41,7 @@ class PipelineService:
         session.add(slide)
         await session.flush()
 
+        slide_pages: list[SlidePage] = []
         for page_number, text in enumerate(pages_text, start=1):
             slide_page = SlidePage(
                 slide_id=slide.id,
@@ -47,9 +50,12 @@ class PipelineService:
                 status=SlidePageStatus.pending,
             )
             session.add(slide_page)
-            await session.flush()
+            slide_pages.append(slide_page)
+        await session.flush()
 
-            await self._process_page(session, slide_page, text)
+        for batch_start in range(0, len(slide_pages), _IDENTIFY_BATCH_SIZE):
+            batch = slide_pages[batch_start : batch_start + _IDENTIFY_BATCH_SIZE]
+            await self._process_batch(session, batch)
 
         slide.status = SlideStatus.reviewing
         await session.commit()
@@ -58,14 +64,24 @@ class PipelineService:
             await session.refresh(page, attribute_names=["terms"])
         return slide
 
-    async def _process_page(self, session: AsyncSession, slide_page: SlidePage, text: str) -> None:
+    async def _process_batch(self, session: AsyncSession, batch: list[SlidePage]) -> None:
         known_domain_tags = await self._known_domain_tag_displays(session)
         known_domain_tags_normalized = {t.tag_normalized for t in (await self._all_domain_tags(session))}
 
-        identify_result = await self.identifier.identify(text, known_domain_tags)
+        pages_by_number = {slide_page.page_number: slide_page for slide_page in batch}
+        pages_input = [
+            PageInput(page_number=slide_page.page_number, text=slide_page.extracted_text)
+            for slide_page in batch
+        ]
+        identify_result = await self.identifier.identify(pages_input, known_domain_tags)
 
-        seen_keys: set[tuple[str, str]] = set()
+        seen_keys_per_page: dict[int, set[tuple[str, str]]] = {}
         for identified in identify_result.terms:
+            slide_page = pages_by_number.get(identified.page_number)
+            if slide_page is None:
+                continue
+
+            seen_keys = seen_keys_per_page.setdefault(identified.page_number, set())
             key = composite_key(identified.term, identified.domain_tag)
             if key in seen_keys:
                 continue
@@ -109,7 +125,7 @@ class PipelineService:
                 conflict_domain_tag_display = conflict_row.domain_tag_display
 
             define_result = await self.definer.define(
-                identified.term, identified.domain_tag, text, conflicting_definition
+                identified.term, identified.domain_tag, slide_page.extracted_text, conflicting_definition
             )
 
             page_term = PageTerm(

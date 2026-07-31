@@ -4,6 +4,8 @@ Wired in via app/services/pipeline.py's get_pipeline_service() Depends() —
 no other file needs to change to swap this in for the stub.
 """
 
+import logging
+
 from openai import AsyncOpenAI
 
 from app.config import settings
@@ -11,18 +13,57 @@ from app.services.llm.interface import (
     ConflictingDefinition,
     DefineResult,
     IdentifyResult,
+    PageInput,
     TermDefiner,
     TermIdentifier,
 )
 
+logger = logging.getLogger(__name__)
+
 _IDENTIFY_SYSTEM_PROMPT = """\
-TODO: instruct the model to read one slide page of text and return the
-important domain-specific terms on it, each tagged with a short domain
-(e.g. "AI/ML", "Electronics"). Emphasize:
-- only genuinely important/technical terms, not every capitalized word
-- reuse one of the provided known_domain_tags when the term clearly
-  belongs to that domain, instead of inventing near-duplicate tags
-- terms must be substrings/paraphrases grounded in the given page text
+<role>
+Bạn là trợ lý phân tích tài liệu chuyên ngành.
+</role>
+
+<task>
+Đọc nội dung MỘT LÔ (batch) gồm nhiều trang slide — mỗi trang được đánh dấu bằng một cặp thẻ
+`<page-N>...</page-N>` với N là số thứ tự trang — và trích xuất các thuật ngữ chuyên ngành quan
+trọng xuất hiện trong TỪNG trang. Phải xử lý lần lượt tất cả các trang được cung cấp, không được
+bỏ sót trang nào.
+</task>
+
+<term_selection_rules>
+- Chỉ chọn thuật ngữ thực sự mang tính kỹ thuật, chuyên ngành — bỏ qua từ thông thường, từ viết hoa đơn thuần, tên riêng không mang nghĩa chuyên môn.
+- Hãy dựa trên ngữ cảnh của trang slide và chọn thuật ngữ dựa trên giả thuyết: Người đọc sẽ không hiểu nội dung trang slide nếu như không hiểu thuật ngữ đó.
+Nếu độ tự tin của bạn về giả thuyết lớn hơn 70%, thì đó là một thuật ngữ quan trọng đối với trang slide.
+- Thuật ngữ phải có căn cứ trực tiếp từ nội dung trang chứa nó — là chuỗi con hoặc cách diễn đạt lại sát nghĩa, không được bịa đặt.
+- Không lấy trùng trong cùng một trang: nếu cùng một khái niệm xuất hiện nhiều lần dưới dạng khác nhau trên cùng trang, chỉ giữ một dạng đại diện nhất. Cùng một thuật ngữ xuất hiện ở các trang khác nhau thì vẫn giữ riêng cho từng trang.
+</term_selection_rules>
+
+<domain_tag_rules>
+- Mỗi thuật ngữ phải gắn đúng một `domain_tag` mô tả lĩnh vực chuyên môn (ví dụ: "AI/ML", "Điện tử", "Tài chính", "Y khoa").
+- Nếu danh sách `known_domain_tags` được cung cấp trong input, ƯU TIÊN dùng lại nhãn có sẵn — không tự đặt nhãn mới khi đã có nhãn tương đương.
+- Chỉ tạo nhãn mới khi thuật ngữ rõ ràng không thuộc bất kỳ nhãn nào trong `known_domain_tags`.
+</domain_tag_rules>
+
+<page_number_rules>
+- Mỗi thuật ngữ trong kết quả PHẢI kèm `page_number` là số N lấy đúng từ thẻ `<page-N>` chứa nó.
+- `page_number` chỉ được là một trong các số thứ tự trang đã xuất hiện trong input — không được bịa ra số trang khác hoặc lệch số.
+</page_number_rules>
+
+<output_format>
+Trả về JSON duy nhất, không kèm giải thích hay markdown:
+
+{
+  "terms": [
+    {"term": "...", "domain_tag": "...", "page_number": ...},
+    ...
+  ]
+}
+
+Nếu không trang nào chứa thuật ngữ chuyên ngành, trả về:
+{"terms": []}
+</output_format>
 """
 
 _DEFINE_SYSTEM_PROMPT = """\
@@ -39,11 +80,11 @@ class OpenAITermIdentifier(TermIdentifier):
         self._client = client or AsyncOpenAI(api_key=settings.openai_api_key)
         self._model = model or settings.openai_model
 
-    async def identify(self, page_text: str, known_domain_tags: list[str]) -> IdentifyResult:
-        user_prompt = self._build_identify_prompt(page_text, known_domain_tags)
+    async def identify(self, pages: list[PageInput], known_domain_tags: list[str]) -> IdentifyResult:
+        user_prompt = self._build_identify_prompt(pages, known_domain_tags)
+        page_range = f"{pages[0].page_number}-{pages[-1].page_number}"
+        logger.info("identify() user prompt (pages %s):\n%s", page_range, user_prompt)
 
-        # TODO: log raw request/response to the repo per backend-spec.md's R5
-        # requirement, once real calls are actually happening.
         response = await self._client.beta.chat.completions.parse(
             model=self._model,
             messages=[
@@ -56,14 +97,14 @@ class OpenAITermIdentifier(TermIdentifier):
         result = response.choices[0].message.parsed
         if result is None:
             raise ValueError("OpenAI identify() call returned no parsed result")
+        logger.info("identify() response (pages %s):\n%s", page_range, result.model_dump_json())
         return result
 
-    def _build_identify_prompt(self, page_text: str, known_domain_tags: list[str]) -> str:
-        # TODO: fill in the actual prompt template.
-        return (
-            f"Known domain tags: {known_domain_tags}\n\n"
-            f"Page text:\n{page_text}"
+    def _build_identify_prompt(self, pages: list[PageInput], known_domain_tags: list[str]) -> str:
+        pages_block = "\n".join(
+            f"<page-{page.page_number}>\n{page.text}\n</page-{page.page_number}>" for page in pages
         )
+        return f"Known domain tags: {known_domain_tags}\n\n{pages_block}"
 
 # Bước 2 của LLM: Generate định nghĩa cho terms
 class OpenAITermDefiner(TermDefiner):
